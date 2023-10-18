@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option go_package = "github.com/DHLarsen/ChittyChat/proto";
+
+package proto;
+
+service Model
+{
+    rpc SendMessage (stream Message) returns (Ack);
+}
+
+message Message {
+    string clientName = 1;
+    string message = 2;
+    int64 time = 3;
+}
+
+message Ack {
+
+}
+
+message Send {
+    
+}
