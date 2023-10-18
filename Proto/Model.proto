@@ -7,6 +7,7 @@ package proto;
 service Model
 {
     rpc SendMessage (stream Message) returns (Ack);
+    rpc GetUpdate (stream UpdateRequest) returns (stream Message);
 }
 
 message Message {
@@ -15,10 +16,11 @@ message Message {
     int64 time = 3;
 }
 
-message Ack {
-
+message UpdateRequest {
+    string status = 1;
 }
 
-message Send {
-    
+
+message Ack {
+    string status = 1;
 }

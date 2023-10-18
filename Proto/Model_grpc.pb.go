@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	Model_SendMessage_FullMethodName = "/proto.Model/SendMessage"
+	Model_GetUpdate_FullMethodName   = "/proto.Model/GetUpdate"
 )
 
 // ModelClient is the client API for Model service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ModelClient interface {
 	SendMessage(ctx context.Context, opts ...grpc.CallOption) (Model_SendMessageClient, error)
+	GetUpdate(ctx context.Context, opts ...grpc.CallOption) (Model_GetUpdateClient, error)
 }
 
 type modelClient struct {
@@ -71,11 +73,43 @@ func (x *modelSendMessageClient) CloseAndRecv() (*Ack, error) {
 	return m, nil
 }
 
+func (c *modelClient) GetUpdate(ctx context.Context, opts ...grpc.CallOption) (Model_GetUpdateClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Model_ServiceDesc.Streams[1], Model_GetUpdate_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &modelGetUpdateClient{stream}
+	return x, nil
+}
+
+type Model_GetUpdateClient interface {
+	Send(*UpdateRequest) error
+	Recv() (*Message, error)
+	grpc.ClientStream
+}
+
+type modelGetUpdateClient struct {
+	grpc.ClientStream
+}
+
+func (x *modelGetUpdateClient) Send(m *UpdateRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *modelGetUpdateClient) Recv() (*Message, error) {
+	m := new(Message)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ModelServer is the server API for Model service.
 // All implementations must embed UnimplementedModelServer
 // for forward compatibility
 type ModelServer interface {
 	SendMessage(Model_SendMessageServer) error
+	GetUpdate(Model_GetUpdateServer) error
 	mustEmbedUnimplementedModelServer()
 }
 
@@ -85,6 +119,9 @@ type UnimplementedModelServer struct {
 
 func (UnimplementedModelServer) SendMessage(Model_SendMessageServer) error {
 	return status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+}
+func (UnimplementedModelServer) GetUpdate(Model_GetUpdateServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetUpdate not implemented")
 }
 func (UnimplementedModelServer) mustEmbedUnimplementedModelServer() {}
 
@@ -125,6 +162,32 @@ func (x *modelSendMessageServer) Recv() (*Message, error) {
 	return m, nil
 }
 
+func _Model_GetUpdate_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ModelServer).GetUpdate(&modelGetUpdateServer{stream})
+}
+
+type Model_GetUpdateServer interface {
+	Send(*Message) error
+	Recv() (*UpdateRequest, error)
+	grpc.ServerStream
+}
+
+type modelGetUpdateServer struct {
+	grpc.ServerStream
+}
+
+func (x *modelGetUpdateServer) Send(m *Message) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *modelGetUpdateServer) Recv() (*UpdateRequest, error) {
+	m := new(UpdateRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Model_ServiceDesc is the grpc.ServiceDesc for Model service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -136,6 +199,12 @@ var Model_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SendMessage",
 			Handler:       _Model_SendMessage_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetUpdate",
+			Handler:       _Model_GetUpdate_Handler,
+			ServerStreams: true,
 			ClientStreams: true,
 		},
 	},

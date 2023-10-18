@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"bufio"
 	"context"
 	"fmt"
@@ -16,7 +17,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var server gRPC.ModelClient
+var client gRPC.ModelClient
 var ServerConn *grpc.ClientConn
 
 func ConnectToServer() {
@@ -25,21 +26,49 @@ func ConnectToServer() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	conn, err := grpc.Dial(":8888", opts...)
+	defer conn.Close()
 	if err != nil {
 		print(err)
 	}
 
-	server = gRPC.NewModelClient(conn)
+	client = gRPC.NewModelClient(conn)
 	ServerConn = conn
+	
 	log.Println("the connection is: ", conn.GetState().String())
 
+	//go updateListen()
+}
+
+func updateListen() {
+	updateRequest := gRPC.UpdateRequest{}
+
+	stream, err := client.GetUpdate(context.Background())
+	if err != nil {
+		log.Fatal(err) // dont use panic in your real project
+	}
+
+	stream.Send(&updateRequest)
+
+	for {
+		resp, err := stream.Recv()
+		if err == io.EOF {
+			panic(err)
+		}
+		fmt.Println(resp)
+	}
 }
 
 func main() {
 	ConnectToServer()
-	defer ServerConn.Close()
 
+	defer ServerConn.Close()
 	reader := bufio.NewReader(os.Stdin)
+	
+	stream, err := client.SendMessage(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	
 
 	//Infinite loop to listen for clients input.
 	for {
@@ -52,17 +81,7 @@ func main() {
 		}
 		input = strings.TrimSpace(input) //Trim input
 
-		if input == "hi" {
-			stream, err := server.SendMessage(context.Background())
-			if err != nil {
-				print(err)
-			}
-
-			greet := gRPC.Message{ClientName: "client", Message: "Hello from client!"}
-
-			stream.Send(&greet)
-			stream.Send(&greet)
-		}
+		stream.Send(&gRPC.Message{ClientName: "client", Message: input})
 		continue
 	}
 }

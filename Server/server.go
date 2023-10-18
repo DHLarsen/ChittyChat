@@ -18,6 +18,8 @@ type Server struct {
 	mutex sync.Mutex
 }
 
+var messages = []*gRPC.Message{}
+
 func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 	for {
 		msg, err := msgStream.Recv()
@@ -29,7 +31,18 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 			return err
 		}
 
+		messages = append(messages, msg)
 		log.Printf("Received message from %s: %s", msg.ClientName, msg.Message)
+	}
+
+	return nil
+}
+func (s *Server) GetUpdate(updateStream gRPC.Model_GetUpdateServer) error {
+	for _, msg := range messages {
+		if err := updateStream.Send(msg); err != nil {
+			log.Println("Error: ", err)
+			return err
+		}
 	}
 
 	return nil
@@ -44,7 +57,7 @@ func launchServer() {
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
 		name: "Server",
-		port: "5400",
+		port: "8888",
 	}
 	gRPC.RegisterModelServer(grpcServer, server)
 	if err := grpcServer.Serve(list); err != nil {
@@ -54,5 +67,4 @@ func launchServer() {
 
 func main() {
 	launchServer()
-
 }
