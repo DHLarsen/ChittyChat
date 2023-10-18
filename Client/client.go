@@ -1,10 +1,10 @@
 package main
 
 import (
-	"io"
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -26,14 +26,13 @@ func ConnectToServer() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	conn, err := grpc.Dial(":8888", opts...)
-	defer conn.Close()
 	if err != nil {
 		print(err)
 	}
 
 	client = gRPC.NewModelClient(conn)
 	ServerConn = conn
-	
+
 	log.Println("the connection is: ", conn.GetState().String())
 
 	//go updateListen()
@@ -63,12 +62,11 @@ func main() {
 
 	defer ServerConn.Close()
 	reader := bufio.NewReader(os.Stdin)
-	
+
 	stream, err := client.SendMessage(context.Background())
 	if err != nil {
 		log.Fatal(err)
 	}
-	
 
 	//Infinite loop to listen for clients input.
 	for {
