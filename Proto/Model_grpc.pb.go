@@ -26,7 +26,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ModelClient interface {
-	SendMessage(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Ack, error)
+	SendMessage(ctx context.Context, opts ...grpc.CallOption) (Model_SendMessageClient, error)
 }
 
 type modelClient struct {
@@ -37,20 +37,45 @@ func NewModelClient(cc grpc.ClientConnInterface) ModelClient {
 	return &modelClient{cc}
 }
 
-func (c *modelClient) SendMessage(ctx context.Context, in *Message, opts ...grpc.CallOption) (*Ack, error) {
-	out := new(Ack)
-	err := c.cc.Invoke(ctx, Model_SendMessage_FullMethodName, in, out, opts...)
+func (c *modelClient) SendMessage(ctx context.Context, opts ...grpc.CallOption) (Model_SendMessageClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Model_ServiceDesc.Streams[0], Model_SendMessage_FullMethodName, opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &modelSendMessageClient{stream}
+	return x, nil
+}
+
+type Model_SendMessageClient interface {
+	Send(*Message) error
+	CloseAndRecv() (*Ack, error)
+	grpc.ClientStream
+}
+
+type modelSendMessageClient struct {
+	grpc.ClientStream
+}
+
+func (x *modelSendMessageClient) Send(m *Message) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *modelSendMessageClient) CloseAndRecv() (*Ack, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(Ack)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ModelServer is the server API for Model service.
 // All implementations must embed UnimplementedModelServer
 // for forward compatibility
 type ModelServer interface {
-	SendMessage(context.Context, *Message) (*Ack, error)
+	SendMessage(Model_SendMessageServer) error
 	mustEmbedUnimplementedModelServer()
 }
 
@@ -58,8 +83,8 @@ type ModelServer interface {
 type UnimplementedModelServer struct {
 }
 
-func (UnimplementedModelServer) SendMessage(context.Context, *Message) (*Ack, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
+func (UnimplementedModelServer) SendMessage(Model_SendMessageServer) error {
+	return status.Errorf(codes.Unimplemented, "method SendMessage not implemented")
 }
 func (UnimplementedModelServer) mustEmbedUnimplementedModelServer() {}
 
@@ -74,22 +99,30 @@ func RegisterModelServer(s grpc.ServiceRegistrar, srv ModelServer) {
 	s.RegisterService(&Model_ServiceDesc, srv)
 }
 
-func _Model_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Message)
-	if err := dec(in); err != nil {
+func _Model_SendMessage_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ModelServer).SendMessage(&modelSendMessageServer{stream})
+}
+
+type Model_SendMessageServer interface {
+	SendAndClose(*Ack) error
+	Recv() (*Message, error)
+	grpc.ServerStream
+}
+
+type modelSendMessageServer struct {
+	grpc.ServerStream
+}
+
+func (x *modelSendMessageServer) SendAndClose(m *Ack) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *modelSendMessageServer) Recv() (*Message, error) {
+	m := new(Message)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(ModelServer).SendMessage(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Model_SendMessage_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ModelServer).SendMessage(ctx, req.(*Message))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // Model_ServiceDesc is the grpc.ServiceDesc for Model service.
@@ -98,12 +131,13 @@ func _Model_SendMessage_Handler(srv interface{}, ctx context.Context, dec func(i
 var Model_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "proto.Model",
 	HandlerType: (*ModelServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "SendMessage",
-			Handler:    _Model_SendMessage_Handler,
+			StreamName:    "SendMessage",
+			Handler:       _Model_SendMessage_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "Proto/Model.proto",
 }

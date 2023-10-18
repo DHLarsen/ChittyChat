@@ -52,19 +52,17 @@ func main() {
 		}
 		input = strings.TrimSpace(input) //Trim input
 
-		if err == nil {
-			if input == "hi" {
-				stream, err := server.SendMessage(context.Background(), input)
-				if err != nil {
-					print(err)
-				}
-
-				greet := gRPC.Message{ClientName: "client", Message: "Hello from client!"}
-
-				stream.Send(&greet)
-				stream.Send(&greet)
+		if input == "hi" {
+			stream, err := server.SendMessage(context.Background())
+			if err != nil {
+				print(err)
 			}
-			continue
+
+			greet := gRPC.Message{ClientName: "client", Message: "Hello from client!"}
+
+			stream.Send(&greet)
+			stream.Send(&greet)
 		}
+		continue
 	}
 }
