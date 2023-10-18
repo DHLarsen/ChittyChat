@@ -18,7 +18,8 @@ type Server struct {
 	mutex sync.Mutex
 }
 
-var messages = []*gRPC.Message{}
+var updateChans = []chan *gRPC.Message{}
+//var messages = []*gRPC.Message{}
 
 func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 	for {
@@ -31,21 +32,22 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 			return err
 		}
 
-		messages = append(messages, msg)
+		for _, updateChan := range updateChans {
+			updateChan <- msg
+		}
 		log.Printf("Received message from %s: %s", msg.ClientName, msg.Message)
 	}
 
 	return nil
 }
 func (s *Server) GetUpdate(updateStream gRPC.Model_GetUpdateServer) error {
-	for _, msg := range messages {
-		if err := updateStream.Send(msg); err != nil {
-			log.Println("Error: ", err)
-			return err
-		}
+	updateChan := make(chan *gRPC.Message)
+	updateChans = append(updateChans, updateChan)
+	for {
+		var msg = <- updateChan
+		log.Println("Sending: ", msg.Message)
+		updateStream.Send(msg)
 	}
-
-	return nil
 }
 
 func launchServer() {

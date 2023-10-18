@@ -20,6 +20,8 @@ import (
 var client gRPC.ModelClient
 var ServerConn *grpc.ClientConn
 
+var clientName string
+
 func ConnectToServer() {
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
@@ -35,7 +37,7 @@ func ConnectToServer() {
 
 	log.Println("the connection is: ", conn.GetState().String())
 
-	//go updateListen()
+	go updateListen()
 }
 
 func updateListen() {
@@ -51,13 +53,16 @@ func updateListen() {
 	for {
 		resp, err := stream.Recv()
 		if err == io.EOF {
-			panic(err)
+			//panic(err)
 		}
-		fmt.Println(resp)
+		if resp != nil{
+			printOutput(resp)
+		}
 	}
 }
 
 func main() {
+	startup()
 	ConnectToServer()
 
 	defer ServerConn.Close()
@@ -70,7 +75,7 @@ func main() {
 
 	//Infinite loop to listen for clients input.
 	for {
-		fmt.Print("-> ")
+		prepareInput()
 
 		//Read input into var input and any errors into err
 		input, err := reader.ReadString('\n')
@@ -79,7 +84,27 @@ func main() {
 		}
 		input = strings.TrimSpace(input) //Trim input
 
-		stream.Send(&gRPC.Message{ClientName: "client", Message: input})
+		stream.Send(&gRPC.Message{ClientName: clientName, Message: input})
 		continue
 	}
+}
+
+func prepareInput() {
+	fmt.Print("-> ")
+}
+
+func printOutput(msg *gRPC.Message) {
+	name := msg.ClientName
+	if name == clientName {
+		name = "You"
+	}
+	fmt.Println(name, ": ", msg.Message)
+	prepareInput()
+}
+
+func startup() {
+	fmt.Print("Please enter your name: ")
+	input := bufio.NewScanner(os.Stdin)
+	input.Scan()
+	clientName = strings.TrimSpace(input.Text())
 }
