@@ -18,7 +18,12 @@ type Server struct {
 	mutex sync.Mutex
 }
 
+var vTime = []int64{0}
+var vTimeIndex = 0
+
+var updateChansMutex sync.Mutex
 var updateChans = []chan *gRPC.Message{}
+
 //var messages = []*gRPC.Message{}
 
 func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
@@ -26,11 +31,18 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 		msg, err := msgStream.Recv()
 		if err == io.EOF {
 			break
-		}
-		if err != nil {
-			log.Printf("%v", err)
+		} else if err != nil {
+			log.Println(msg)
 			return err
 		}
+
+		updateVTime(msg.Time)
+		//increment vector timestamp when recieving message
+
+		updateChansMutex.Lock()
+		incrementVTime()
+		updateChansMutex.Unlock()
+		msg.Time = vTime
 
 		for _, updateChan := range updateChans {
 			updateChan <- msg
@@ -43,11 +55,44 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 func (s *Server) GetUpdate(updateStream gRPC.Model_GetUpdateServer) error {
 	updateChan := make(chan *gRPC.Message)
 	updateChans = append(updateChans, updateChan)
-	for {
-		var msg = <- updateChan
-		log.Println("Sending: ", msg.Message)
-		updateStream.Send(msg)
+	syncMsg := gRPC.Message{
+		ClientName: "",
+		Message:    "",
+		Time:       vTime,
 	}
+	sendMessage(&syncMsg, updateStream)
+	for {
+		var msg = <-updateChan
+		sendMessage(msg, updateStream)
+	}
+}
+
+func sendMessage(msg *gRPC.Message, updateStream gRPC.Model_GetUpdateServer) {
+	updateChansMutex.Lock()
+	incrementVTime()
+	msg.Time = vTime
+	log.Println("Sending: ", msg.Message)
+	updateStream.Send(msg)
+	updateChansMutex.Unlock()
+}
+
+func updateVTime(newVTime []int64) {
+	updateChansMutex.Lock()
+	for len(vTime) < len(newVTime) {
+		vTime = append(vTime, 0)
+	}
+	for i, time := range newVTime {
+		if time > vTime[i] {
+			vTime[i] = time
+		}
+	}
+	log.Println("Set time to: ", vTime)
+	updateChansMutex.Unlock()
+}
+
+func incrementVTime() {
+	vTime[vTimeIndex]++
+	log.Println("Set time to: ", vTime)
 }
 
 func launchServer() {

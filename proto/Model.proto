@@ -13,7 +13,7 @@ service Model
 message Message {
     string clientName = 1;
     string message = 2;
-    int64 time = 3;
+    repeated int64 time = 3;
 }
 
 message UpdateRequest {

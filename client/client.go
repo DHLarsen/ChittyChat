@@ -17,6 +17,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var vTime []int64
+var vTimeIndex int
+
 var client gRPC.ModelClient
 var ServerConn *grpc.ClientConn
 
@@ -45,7 +48,7 @@ func updateListen() {
 
 	stream, err := client.GetUpdate(context.Background())
 	if err != nil {
-		log.Fatal(err) // dont use panic in your real project
+		log.Fatal(err)
 	}
 
 	stream.Send(&updateRequest)
@@ -55,8 +58,28 @@ func updateListen() {
 		if err == io.EOF {
 			//panic(err)
 		}
-		if resp != nil{
-			printOutput(resp)
+		if resp != nil {
+			if resp.ClientName == "" && resp.Message == "" {
+				vTime = resp.Time
+				vTimeIndex = len(vTime)
+				vTime = append(vTime, 0)
+				fmt.Println("Recieved server time: ", vTime)
+				prepareInput()
+			} else {
+				updateVTime(resp.Time)
+				printOutput(resp)
+			}
+		}
+	}
+}
+
+func updateVTime(newVTime []int64) {
+	for len(vTime) < len(newVTime) {
+		vTime = append(vTime, 0)
+	}
+	for i, time := range newVTime {
+		if time > vTime[i] {
+			vTime[i] = time
 		}
 	}
 }
@@ -84,7 +107,8 @@ func main() {
 		}
 		input = strings.TrimSpace(input) //Trim input
 
-		stream.Send(&gRPC.Message{ClientName: clientName, Message: input})
+		vTime[vTimeIndex]++
+		stream.Send(&gRPC.Message{ClientName: clientName, Message: input, Time: vTime})
 		continue
 	}
 }
@@ -98,7 +122,7 @@ func printOutput(msg *gRPC.Message) {
 	if name == clientName {
 		name = "You"
 	}
-	fmt.Println(name, ": ", msg.Message)
+	fmt.Println(name, ": ", msg.Message, " | time: ", msg.Time)
 	prepareInput()
 }
 
