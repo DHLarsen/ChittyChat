@@ -27,13 +27,16 @@ var updateChans = []chan *gRPC.Message{}
 //var messages = []*gRPC.Message{}
 
 func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
+	clientName := ""
 	for {
 		msg, err := msgStream.Recv()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Println(msg)
+			log.Println(clientName, " disconnected")
 			return err
+		} else if clientName == "" {
+			clientName = msg.ClientName
 		}
 
 		updateVTime(msg.Time)
@@ -44,26 +47,34 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 		updateChansMutex.Unlock()
 		msg.Time = vTime
 
-		for _, updateChan := range updateChans {
-			updateChan <- msg
-		}
+		broadcastMsg(msg)
 		log.Printf("Received message from %s: %s", msg.ClientName, msg.Message)
 	}
 
 	return nil
 }
 func (s *Server) GetUpdate(updateStream gRPC.Model_GetUpdateServer) error {
+	msg, err := updateStream.Recv()
+	if err == io.EOF {
+		log.Fatal("Error in creating connection")
+	}
 	updateChan := make(chan *gRPC.Message)
 	updateChans = append(updateChans, updateChan)
 	syncMsg := gRPC.Message{
 		ClientName: "",
-		Message:    "",
+		Message:    "Participant " + msg.ClientName + " joined the chat room!",
 		Time:       vTime,
 	}
-	sendMessage(&syncMsg, updateStream)
+	broadcastMsg(&syncMsg)
 	for {
 		var msg = <-updateChan
 		sendMessage(msg, updateStream)
+	}
+}
+
+func broadcastMsg(msg *gRPC.Message) {
+	for _, updateChan := range updateChans {
+		updateChan <- msg
 	}
 }
 

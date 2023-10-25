@@ -17,7 +17,7 @@ message Message {
 }
 
 message UpdateRequest {
-    string status = 1;
+    string ClientName = 1;
 }
 
 

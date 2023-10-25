@@ -44,7 +44,7 @@ func ConnectToServer() {
 }
 
 func updateListen() {
-	updateRequest := gRPC.UpdateRequest{}
+	updateRequest := gRPC.UpdateRequest{ClientName: clientName}
 
 	stream, err := client.GetUpdate(context.Background())
 	if err != nil {
@@ -59,16 +59,15 @@ func updateListen() {
 			//panic(err)
 		}
 		if resp != nil {
-			if resp.ClientName == "" && resp.Message == "" {
+			if vTime == nil {
 				vTime = resp.Time
 				vTimeIndex = len(vTime)
 				vTime = append(vTime, 0)
 				fmt.Println("Recieved server time: ", vTime)
 				prepareInput()
-			} else {
-				updateVTime(resp.Time)
-				printOutput(resp)
 			}
+			updateVTime(resp.Time)
+			printOutput(resp)
 		}
 	}
 }
