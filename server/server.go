@@ -65,7 +65,7 @@ func (s *Server) GetUpdate(updateStream gRPC.Model_GetUpdateServer) error {
 		Message:    "Participant " + msg.ClientName + " joined the chat room!",
 		Time:       vTime,
 	}
-	broadcastMsg(&syncMsg)
+	go broadcastMsg(&syncMsg) // Check whether this is the right way to do it with a go routine. !!!!!!
 	for {
 		var msg = <-updateChan
 		sendMessage(msg, updateStream)
