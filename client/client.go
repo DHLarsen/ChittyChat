@@ -107,7 +107,11 @@ func main() {
 		input = strings.TrimSpace(input) //Trim input
 
 		vTime[vTimeIndex]++
-		stream.Send(&gRPC.Message{ClientName: clientName, Message: input, Time: vTime})
+		if len(input) > 128 {
+			log.Println("Message too long, max 128 characters")
+		} else {
+			stream.Send(&gRPC.Message{ClientName: clientName, Message: input, Time: vTime})
+		}
 		continue
 	}
 }

@@ -33,7 +33,7 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Println(clientName, " disconnected")
+			log.Println(clientName, " disconnected at vector time: ", vTime)
 			return err
 		} else if clientName == "" {
 			clientName = msg.ClientName
