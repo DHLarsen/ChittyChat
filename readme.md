@@ -16,3 +16,5 @@ Send messages:
 Type the message and press enter.
 
 If port 8889 is occupied, please change the port variable in client/client.go and server/server.go
+
+To disconnect a client, end the process (CTRL + C in most terminals)
