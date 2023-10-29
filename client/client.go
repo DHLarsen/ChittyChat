@@ -18,6 +18,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var port = "8889"
+
 var vTime []int64
 var vTimeIndex int
 
@@ -33,7 +35,7 @@ func ConnectToServer() {
 		grpc.WithBlock(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.Dial(":8888", opts...)
+	conn, err := grpc.Dial(":"+port, opts...)
 	if err != nil {
 		print(err)
 	}
@@ -59,9 +61,11 @@ func updateListen() {
 	for {
 		resp, err := stream.Recv()
 		updateVTime(resp.Time)
-		timeMutex.Lock()
-		vTime[vTimeIndex]++
-		timeMutex.Unlock()
+		if vTimeIndex != 0 {
+			timeMutex.Lock()
+			vTime[vTimeIndex]++
+			timeMutex.Unlock()
+		}
 		if err == io.EOF {
 			//panic(err)
 		}

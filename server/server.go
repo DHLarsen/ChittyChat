@@ -19,6 +19,8 @@ type Server struct {
 	mutex sync.Mutex
 }
 
+var port = "8889"
+
 var vTime = []int64{0}
 var vTimeIndex = 0
 
@@ -104,7 +106,7 @@ func incrementVTime() {
 }
 
 func launchServer() {
-	list, err := net.Listen("tcp", "localhost:8888")
+	list, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
 		log.Fatalf("failed to listen %v", err)
 	}
@@ -112,9 +114,10 @@ func launchServer() {
 	grpcServer := grpc.NewServer(opts...)
 	server := &Server{
 		name: "Server",
-		port: "8888",
+		port: port,
 	}
 	gRPC.RegisterModelServer(grpcServer, server)
+	log.Println("Server upstart sucessfull")
 	if err := grpcServer.Serve(list); err != nil {
 		log.Fatalf("failed to serve %v", err)
 	}
