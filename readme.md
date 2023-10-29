@@ -1,7 +1,14 @@
-How to run: 
-step 1: navigate to the server folder and run the command: "go run server.go"
+How to run:
+Starting the server:
+From a terminal navigate to the server folder and run the command: "go run server.go"
 
-repeat these steps for every client
-    step 1: open a new terminal and navigate to the client folder
-    step 2: run the command: "go run client.go"
-    step 3: follow the instructions on the screen
+repeat these steps for every client:
+
+Starting the client:
+open a new terminal and navigate to the client folder. run the command: "go run client.go"
+
+Connecting client to the server:
+follow the instructions on the screen (write name).
+
+Send messages:
+Type the message and press enter.
