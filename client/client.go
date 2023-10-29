@@ -60,26 +60,19 @@ func updateListen() {
 
 	for {
 		resp, err := stream.Recv()
-		updateVTime(resp.Time)
-		if vTimeIndex != 0 {
-			timeMutex.Lock()
-			vTime[vTimeIndex]++
-			timeMutex.Unlock()
-		}
 		if err == io.EOF {
 			//panic(err)
 		}
 		if resp != nil {
-			/*if vTime == nil {
-				vTime = resp.Time
-				vTimeIndex = len(vTime)
-				vTime = append(vTime, 0)
-				fmt.Println("Recieved server time: ", vTime)
-				prepareInput()
-			}*/
+			updateVTime(resp.Time)
 			if vTimeIndex == 0 {
 				vTimeIndex = len(vTime) - 1
 				fmt.Println("Set time index to: ", vTimeIndex)
+			}
+			if vTimeIndex != 0 {
+				timeMutex.Lock()
+				vTime[vTimeIndex]++
+				timeMutex.Unlock()
 			}
 			printOutput(resp)
 		}
@@ -143,7 +136,7 @@ func printOutput(msg *gRPC.Message) {
 	if name == clientName {
 		name = "You"
 	}
-	fmt.Println(name, ": ", msg.Message, " | time: ", msg.Time)
+	fmt.Println(name, ": ", msg.Message, " | time: ", vTime)
 	prepareInput()
 }
 
