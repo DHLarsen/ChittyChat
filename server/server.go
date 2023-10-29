@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -24,8 +25,6 @@ var vTimeIndex = 0
 var updateChansMutex sync.Mutex
 var updateChans = []chan *gRPC.Message{}
 
-//var messages = []*gRPC.Message{}
-
 func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 	clientName := ""
 	for {
@@ -33,39 +32,33 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 		if err == io.EOF {
 			break
 		} else if err != nil {
+			updateChansMutex.Lock()
+			incrementVTime()
+			updateChansMutex.Unlock()
 			log.Println(clientName, " disconnected at vector time: ", vTime)
+			broadcastMsg(&gRPC.Message{
+				ClientName: "",
+				Message:    fmt.Sprint(clientName, " disconnected at server time: ", vTime),
+				Time:       vTime,
+			})
 			return err
 		} else if clientName == "" {
 			clientName = msg.ClientName
 		}
-
 		updateVTime(msg.Time)
-		//increment vector timestamp when recieving message
-
 		updateChansMutex.Lock()
 		incrementVTime()
 		updateChansMutex.Unlock()
-		msg.Time = vTime
 
-		broadcastMsg(msg)
 		log.Printf("Received message from %s: %s", msg.ClientName, msg.Message)
+		broadcastMsg(msg)
 	}
 
 	return nil
 }
 func (s *Server) GetUpdate(updateStream gRPC.Model_GetUpdateServer) error {
-	msg, err := updateStream.Recv()
-	if err == io.EOF {
-		log.Fatal("Error in creating connection")
-	}
 	updateChan := make(chan *gRPC.Message)
 	updateChans = append(updateChans, updateChan)
-	syncMsg := gRPC.Message{
-		ClientName: "",
-		Message:    "Participant " + msg.ClientName + " joined the chat room!",
-		Time:       vTime,
-	}
-	go broadcastMsg(&syncMsg) // Check whether this is the right way to do it with a go routine. !!!!!!
 	for {
 		var msg = <-updateChan
 		sendMessage(msg, updateStream)
@@ -89,13 +82,17 @@ func sendMessage(msg *gRPC.Message, updateStream gRPC.Model_GetUpdateServer) {
 
 func updateVTime(newVTime []int64) {
 	updateChansMutex.Lock()
-	for len(vTime) < len(newVTime) {
-		vTime = append(vTime, 0)
-	}
-	for i, time := range newVTime {
-		if time > vTime[i] {
-			vTime[i] = time
+	if newVTime != nil {
+		for len(vTime) < len(newVTime) {
+			vTime = append(vTime, 0)
 		}
+		for i, time := range newVTime {
+			if time > vTime[i] {
+				vTime[i] = time
+			}
+		}
+	} else {
+		vTime = append(vTime, 0)
 	}
 	log.Println("Set time to: ", vTime)
 	updateChansMutex.Unlock()

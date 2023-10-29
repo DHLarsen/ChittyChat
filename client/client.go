@@ -55,18 +55,23 @@ func updateListen() {
 
 	for {
 		resp, err := stream.Recv()
+		updateVTime(resp.Time)
+		vTime[vTimeIndex]++
 		if err == io.EOF {
 			//panic(err)
 		}
 		if resp != nil {
-			if vTime == nil {
+			/*if vTime == nil {
 				vTime = resp.Time
 				vTimeIndex = len(vTime)
 				vTime = append(vTime, 0)
 				fmt.Println("Recieved server time: ", vTime)
 				prepareInput()
+			}*/
+			if vTimeIndex == 0 {
+				vTimeIndex = len(vTime) - 1
+				fmt.Println("Set time index to: ", vTimeIndex)
 			}
-			updateVTime(resp.Time)
 			printOutput(resp)
 		}
 	}
@@ -94,6 +99,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	stream.Send(&gRPC.Message{ClientName: clientName, Message: "Client " + clientName + " has joined the room!", Time: vTime})
 
 	//Infinite loop to listen for clients input.
 	for {
