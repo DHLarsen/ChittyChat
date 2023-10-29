@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	// This has to be the same as the go.mod module,
 	// followed by the path to the folder the proto file is in.
@@ -24,6 +25,8 @@ var client gRPC.ModelClient
 var ServerConn *grpc.ClientConn
 
 var clientName string
+
+var timeMutex sync.Mutex
 
 func ConnectToServer() {
 	opts := []grpc.DialOption{
@@ -56,7 +59,9 @@ func updateListen() {
 	for {
 		resp, err := stream.Recv()
 		updateVTime(resp.Time)
+		timeMutex.Lock()
 		vTime[vTimeIndex]++
+		timeMutex.Unlock()
 		if err == io.EOF {
 			//panic(err)
 		}
@@ -113,7 +118,9 @@ func main() {
 		}
 		input = strings.TrimSpace(input) //Trim input
 
+		timeMutex.Lock()
 		vTime[vTimeIndex]++
+		timeMutex.Unlock()
 		if len(input) > 128 {
 			log.Println("Message too long, max 128 characters")
 		} else {
