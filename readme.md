@@ -1,3 +1,5 @@
+Made by tpep, dhla and habr
+
 How to run:
 Starting the server:
 From a terminal navigate to the server folder and run the command: "go run server.go"
