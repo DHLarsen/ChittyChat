@@ -52,7 +52,7 @@ func (s *Server) SendMessage(msgStream gRPC.Model_SendMessageServer) error {
 		incrementVTime()
 		updateChansMutex.Unlock()
 
-		log.Printf("Received message from %s: %s", msg.ClientName, msg.Message)
+		log.Printf("Received message from %s: %s vTime: %v", msg.ClientName, msg.Message, vTime)
 		broadcastMsg(msg)
 	}
 
@@ -77,7 +77,7 @@ func sendMessage(msg *gRPC.Message, updateStream gRPC.Model_GetUpdateServer) {
 	updateChansMutex.Lock()
 	incrementVTime()
 	msg.Time = vTime
-	log.Println("Sending: ", msg.Message)
+	log.Println("Sending: ", msg.Message, "vTime: ", vTime)
 	updateStream.Send(msg)
 	updateChansMutex.Unlock()
 }
